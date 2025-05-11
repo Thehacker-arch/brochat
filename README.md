@@ -8,8 +8,8 @@
 
   <img src="./UI/frontend/src-tauri/icons/icon.png"
     alt="Void Welcome"
-		width="300"
-	 	height="300"
+		width="290"
+	 	height="290"
     />
 </div>
 
