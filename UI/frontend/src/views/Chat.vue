@@ -91,7 +91,7 @@ function formatDividerDate(date: Date): string {
 
 
 const inputMessage = ref('')
-const user = ref<User>({ id: 'unknown', username: 'unknown', avatar_url: 'unknown'})
+const user = ref<User>({ id: 'unknown', username: 'unknown', avatar_url: 'unknown' })
 const showDropdown = ref(false)
 const showProfile = ref(false)
 const sidebarVisible = ref(true)
@@ -124,7 +124,7 @@ function shouldGroupWithPrevious(index: number): boolean {
 function getUserAvatar(avatarUrl: string): string {
     const u = `${URL}${avatarUrl}`
     console.log(u)
-    return `${URL}${avatarUrl}` 
+    return `${URL}${avatarUrl}`
 }
 
 function getImage(upload_url: string): string {
@@ -255,7 +255,7 @@ const switchToPublicChat = () => {
 
 
 const parseJWT = (token: string): {
-     id: string, username: string, avatarUrl: string
+    id: string, username: string, avatarUrl: string
 } => {
     try {
         const payload = token.split('.')[1]
@@ -274,7 +274,7 @@ const parseJWT = (token: string): {
 const handleAvatarUpload = async (event: Event) => {
     const input = event.target as HTMLInputElement
     if (!input.files?.length) return
-    
+
     const file = input.files[0]
     const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
@@ -282,7 +282,7 @@ const handleAvatarUpload = async (event: Event) => {
         throw new Error('Invalid file type. Please upload an image (JPEG, PNG, GIF, WEBP)')
     }
     if (file.size > 10 * 1024 * 1024) { alert('Avatar must be less than 10MB'); return }
-    
+
     if (input.value) {
         const formData = new FormData()
         formData.append('avatar', file)
@@ -300,7 +300,7 @@ const handleAvatarUpload = async (event: Event) => {
 
             if (currentChat.value === 'public') {
                 await loadPublicMessages()
-            } 
+            }
             else {
                 await loadDMMessages(currentChat.value)
             }
@@ -350,7 +350,7 @@ const sendMessage = async () => {
             }
 
             const convoKey = currentChat.value === 'public' ? 'public'
-                    : getConvoKey(user.value.username, currentChat.value)
+                : getConvoKey(user.value.username, currentChat.value)
 
             if (!conversations.value[convoKey]) {
                 conversations.value[convoKey] = []
@@ -438,7 +438,7 @@ onMounted(async () => {
         user.value = {
             ...res.data
         }
-        console.log("avatar URL:  "+user.value.avatar_url)
+        console.log("avatar URL:  " + user.value.avatar_url)
     } catch (err) {
         console.error("Failed to load user:", err)
         router.push('/login')
@@ -547,41 +547,33 @@ const toggleSidebar = () => {
 
 <template>
     <div class="chat-wrapper">
-        <div class="topbar">
-            <button class="logout-button" @click="handleLogout">Logout</button>
-        </div>
         <aside :class="['sidebar', { collapsed: !sidebarVisible }]">
-            <button class="toggle-sidebar" @click="toggleSidebar">☰</button>
-
             <template v-if="sidebarVisible">
                 <div class="dm-section">
                     <button class="sidebar-button" @click="switchToPublicChat">
-                        Public Channel
+                        🌐 Public Channel
                     </button>
                 </div>
 
                 <div class="dm-section">
                     <button class="sidebar-button" @click="showDropdown = !showDropdown">
-                        Direct Messages ▾
+                        ✉️ Direct Messages ▾
                     </button>
                     <ul v-if="showDropdown" class="dropdown">
                         <!-- Scrollable container if more than 5 DMs -->
                         <div :class="['dropdown-scroll', { 'scroll-enabled': existingDMs.length > 5 }]">
-                            <li v-for="dm in existingDMs" :key="dm" @click="startNewDM(dm)" class="dropdown-user">
+                            <li v-for="dm in existingDMs.filter(u => existingDMs.includes(u) && u !== user.username)"
+                                :key="dm" @click="startNewDM(dm)" class="dropdown-user">
                                 📨 {{ dm }}
                             </li>
                         </div>
 
-                        <!-- New DM options -->
-                        <!-- <li v-for="user in allUsers.filter(u => !existingDMs.includes(u) && u !== user.username)"
-                            :key="user" @click="startNewDM(user)" class="dropdown-user">
-                            ➕ {{ user }}
-                        </li> -->
-
-                        <li v-for="filteredUser in allUsers.filter(u => !existingDMs.includes(u) && u !== user.username)"
-                            :key="filteredUser" @click="startNewDM(filteredUser)" class="dropdown-user">
-                            ➕ {{ filteredUser }}
-                        </li>
+                        <div class="dropdown-scroll">
+                            <li v-for="filteredUser in allUsers.filter(u => !existingDMs.includes(u) && u !== user.username)"
+                                :key="filteredUser" @click="startNewDM(filteredUser)" class="dropdown-user">
+                                ➕ {{ filteredUser }}
+                            </li>
+                        </div>
                     </ul>
                 </div>
 
@@ -597,19 +589,24 @@ const toggleSidebar = () => {
                     <div class="avatar-upload">
                         <label for="avatar-upload">
                             <img :src="getUserAvatar(user.avatar_url)" class="user-avatar" alt="Profile Picture">
-                            <!-- <button @click="handleAvatarUpload">upload -->
-                            <input id="avatar-upload" type="file" accept="image/*" @change="handleAvatarUpload" style="display: none;">
-                            <!-- </button> -->
+                            <input id="avatar-upload" type="file" accept="image/*" @change="handleAvatarUpload"
+                                style="display: none;">
                         </label>
                     </div>
                 </div>
+                <button class="logout-button" @click="handleLogout">Logout</button>
+
             </template>
         </aside>
 
         <main class="chat-area">
-            <h1 class="chat-title" data-text="broChat">broChat</h1>
+            <div class="chat-header">
+                <button class="toggle-sidebar" @click="toggleSidebar">☰</button>
+                <h1 class="chat-title" data-text="broChat">broChat</h1>
+            </div>
+
             <h1 class="chat-usr">
-                {{ currentChat === 'public' ? 'Public Chat' : `Direct Messaging ${currentChat}` }}
+                {{ currentChat === 'public' ? '🌐 Public Chat' : `✉️ Direct Messaging ${currentChat}` }}
             </h1>
 
 
@@ -639,54 +636,15 @@ const toggleSidebar = () => {
                                     {{ item.message }}
                                 </template>
                                 <template v-if="item.upload_url">
-                                    <img :src="getImage(item.upload_url)" class="uploaded-image" />
+                                    <a :href="getImage(item.upload_url)" :download="item.upload_url">
+                                        <img :src="getImage(item.upload_url)" class="uploaded-image" />
+                                    </a>
                                 </template>
                             </div>
                         </div>
                     </div>
                 </template>
             </div>
-
-
-            <!-- <div class="chat-box" ref="chatContainer">
-                <template v-for="(item, index) in messagesWithDividers" :key="index">
-                    <div v-if="isDateDivider(item)" class="date-divider">
-                        <span class="divider-line"></span>
-                        <span class="divider-text">{{ item.displayText }}</span>
-                        <span class="divider-line"></span>
-                    </div>
-
-
-                    <div v-else :class="['message-bubble', {
-                        'sent': item.isCurrentUser,
-                        'received': !item.isCurrentUser
-                    }]">
-                        <span class="msg-text"><strong>{{ item.username }}:</strong>
-                            {{ item.message }}
-                        </span>
-                        <span class="msg-time">{{ item.time }}</span>
-                    </div>
-                </template>
-            </div> -->
-
-
-            <!-- 
-            <div class="chat-box" ref="chatContainer">
-                <div v-for="(msg, index) in messages" :key="index"
-                    :class="['message-bubble', { 'sent': msg.isCurrentUser, 'received': !msg.isCurrentUser }]">
-
-                    <div v-if="'dateMarker' in msg" class="date-marker">
-                        {{ formatDateMarker(msg.time) }}
-                    </div>
-    
-
-                    <span class="msg-text"><strong>{{ msg.username }}:</strong>
-                        {{ msg.message }}
-
-                    </span>
-                    <span class="msg-time">{{ msg.time }}</span>
-                </div>
-            </div> -->
 
             <div class="chat-input">
                 <input type="file" ref="fileInput" style="display: none;" @change="onFileSelected" />
@@ -702,13 +660,13 @@ const toggleSidebar = () => {
 
 <style scoped>
 .uploaded-image {
-  max-width: 400px;
-  max-height: 300px;
-  width: auto;
-  height: auto;
-  border-radius: 4px;
-  background-color: #f0f0f0;
-  display: block;
+    max-width: 400px;
+    max-height: 300px;
+    width: auto;
+    height: auto;
+    border-radius: 4px;
+    background-color: #f0f0f0;
+    display: block;
 }
 
 .discord-style {
@@ -738,6 +696,13 @@ const toggleSidebar = () => {
 .user-avatar {
     width: 40px;
     height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.user-avatar-dm {
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     object-fit: cover;
 }
@@ -838,12 +803,12 @@ const toggleSidebar = () => {
 
 
 .toggle-sidebar:hover {
-    background-color: #444;
+    background-color: #1e1e1e;
 }
 
 .sidebar {
     width: 250px;
-    min-width: 50px;
+    /* min-width: 50px; */
     transition: width 0.3s ease;
     overflow: hidden;
     padding: 1rem;
@@ -855,17 +820,23 @@ const toggleSidebar = () => {
 }
 
 .sidebar.collapsed {
-    width: 10px;
-    padding: 1rem 0.5rem;
+    width: 0px; /* 10 px */
+    padding: 1rem 0rem; /* 0.5 rem */
 }
 
 .toggle-sidebar {
-    background-color: transparent;
+    background-color: #1e1e1e;
     color: white;
     border: none;
-    font-size: 1.5rem;
+    padding: 1rem;
     cursor: pointer;
-    margin-bottom: 1rem;
+    border-radius: 6px;
+    width: auto;
+    height: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.25rem;
 }
 
 
@@ -877,15 +848,41 @@ const toggleSidebar = () => {
     margin-bottom: 1rem;
     cursor: pointer;
     border-radius: 6px;
-    text-align: left;
+    width: 100%;
+    text-align: center;
+    align-self: flex-start;
+}
+@media (max-width: 600px) {
+  .chat-header {
+    flex-direction:row;
+    justify-content:left;
+    
+    width: 100%;
+    box-sizing: border-box; /* Make padding play nice */
+    flex-shrink: 1;
+  }
+
+  .chat-title {
+    font-size: 2.6rem;
+  }
+}
+
+
+.chat-header {
+    display:flex;
+    align-items: center;
+    gap: 0.2rem; /* space between sidebar and title */
+    padding: 0.2rem;
+    background: #1e1e1e;
+    border-radius: 10px;
 }
 
 .dropdown {
-    background: #2e2e2e;
+    background-color: #cdd5d3;
     list-style: none;
     padding-left: 0;
     margin-top: 0.5rem;
-    border-radius: 4px;
+    border-radius: 6px;
     overflow: hidden;
     max-height: 400px;
     /* Adjust as needed */
@@ -895,10 +892,11 @@ const toggleSidebar = () => {
 .dropdown-scroll {
     max-height: 200px;
     /* Height for scrollable area */
+    background-color: #292b2b;
     overflow-y: auto;
     border-top: 1px solid #444;
     border-bottom: 1px solid #444;
-    margin: 0.25rem 0;
+    margin: 0.25rem 1;
 }
 
 .dropdown-user {
@@ -960,11 +958,10 @@ const toggleSidebar = () => {
 .chat-title {
     font-size: 2.6rem;
     font-family: 'Poppins', sans-serif;
-    /* Create the gradient on a pseudo-element instead */
-    position: relative;
+    position:relative;
+    align-items:flex-end;
     display: inline-block;
     color: transparent;
-    /* Hide the text to show the gradient */
 }
 
 .chat-title::before {
@@ -990,7 +987,7 @@ const toggleSidebar = () => {
     /* background-color: #121212; */
     background-color: #101011;
     border-radius: 8px;
-    padding: 1rem;
+    padding:0rem;
     margin-bottom: 1rem;
     overflow-y: auto;
     overflow-x: hidden;
@@ -1031,7 +1028,7 @@ const toggleSidebar = () => {
     border: none;
     padding: 0.5rem 1rem;
     border-radius: 6px;
-    align-self: flex-start;
+    /* align-self: flex-start; */
     cursor: pointer;
 }
 </style>
