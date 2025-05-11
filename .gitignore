@@ -3,10 +3,6 @@ dist/
 build/
 target/
 .env
-# Ignore all .tmp files
 *.tmp
-
-# Ignore all .DS_Store files (Mac)
 .DS_Store
-
 CaddyFile
