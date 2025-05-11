@@ -5,4 +5,3 @@ target/
 .env
 *.tmp
 .DS_Store
-CaddyFile
