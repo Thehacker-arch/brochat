@@ -62,6 +62,21 @@ Perfect for:
 
 ---
 
+<div style="display: flex; justify-content: center; gap: 10px;">
+<table align="center">
+  <tr>
+    <td>
+      <img src="./UI/frontend/src-tauri/icons/photo.png" alt="Void Welcome" height="430" width="200"/>
+    </td>
+    <td>
+      <img src="./UI/frontend/src-tauri/icons/photo2.png" alt="Void Welcome" height="430" width="200"/>
+    </td>
+  </tr>
+</table>
+</div
+
+---
+
 ## Run Locally
 > ⚠️ Requirements: `Rust`, `Node.js`, `PostgreSQL`, `Tauri CLI`
 
