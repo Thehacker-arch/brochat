@@ -33,6 +33,7 @@ fn allowed_origins_from_env() -> Vec<HeaderValue> {
         origins = vec![
             "http://localhost:5173".parse::<HeaderValue>().unwrap(),
             "http://tauri.localhost".parse::<HeaderValue>().unwrap(),
+            "https://tauri.localhost".parse::<HeaderValue>().unwrap(),
         ];
     }
 

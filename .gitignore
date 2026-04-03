@@ -3,5 +3,9 @@ dist/
 build/
 target/
 .env
+.env.production
+.env.local
+**/keystore.properties
+*.jks
 *.tmp
 .DS_Store

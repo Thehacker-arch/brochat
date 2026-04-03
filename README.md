@@ -145,6 +145,8 @@ npm run dev
 cargo tauri android dev
 ```
 
+Production APK build, signing, and sharing: see `docs/ANDROID.md`.
+
 #### For ios
 ```
 cargo tauri ios dev

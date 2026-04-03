@@ -5,7 +5,7 @@
   "identifier": "com.bro.chat",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://192.168.1.45:5173",
+    "devUrl": "http://192.168.0.102:5173",
     "beforeDevCommand": "npm run dev -- --host",
     "beforeBuildCommand": "npm run build"
   },
@@ -21,7 +21,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' http://192.168.1.45:5173 ws://192.168.1.45:3000"
+      "csp": "default-src 'self' tauri: asset: https://asset.localhost http://asset.localhost; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http: blob:; connect-src 'self' https://brochat.duckdns.org wss://brochat.duckdns.org http://localhost:* http://127.0.0.1:* http://192.168.*:* ws://localhost:* ws://127.0.0.1:* ws://192.168.*:* ws://tauri.localhost:* https://tauri.localhost:*"
     }
   },
   "bundle": {
