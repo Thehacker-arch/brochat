@@ -56,7 +56,7 @@ impl AuthenticatedUser {
 
         let token = auth_header.trim_start_matches("Bearer ").trim();
 
-        let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "your-secret-key".to_string());
+        let secret = std::env::var("JWT_SECRET").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
         let decoded = decode::<Claims>(
             token,

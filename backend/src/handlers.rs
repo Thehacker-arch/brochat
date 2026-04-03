@@ -1,25 +1,25 @@
 // handlers.rs
+use crate::models::AuthenticatedUser;
+use crate::ws::ChatState;
+use crate::{
+    auth::create_jwt,
+    db::get_pool,
+    models::{MessageModel, User},
+    utils::{hash_password, verify_password},
+    ws::SharedChatState,
+};
+use axum::Extension;
+use axum::extract::{Multipart, Path};
+use axum::response::IntoResponse;
+use axum::{Json, extract::State, http::StatusCode};
+use axum::{body::Body, http::Request, middleware::Next, response::Response};
+use serde::Deserialize;
+use serde_json::{Value, json};
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::sync::Arc;
-use axum::extract::{Multipart, Path};
-use axum::Extension;
-use axum::{extract::State, http::StatusCode, Json};
-use axum::response::IntoResponse;
-use serde::Deserialize;
-use serde_json::{json, Value};
 use tokio::sync::RwLock;
 use uuid::Uuid;
-use crate::models::AuthenticatedUser;
-use crate::ws::ChatState;
-use crate::{auth::create_jwt, db::get_pool, models::{MessageModel, User}, utils::{hash_password, verify_password}, ws::SharedChatState};
-use axum::{
-    body::Body,
-    http::Request,
-    middleware::Next,
-    response::Response,
-};
-
 
 #[derive(Deserialize)]
 pub struct AuthPayload {
@@ -27,17 +27,16 @@ pub struct AuthPayload {
     pub password: String,
 }
 
-
-pub async fn register(Json(payload): Json<AuthPayload>) -> Result<Json<User>, (StatusCode, Json<Value>)> {
-
+pub async fn register(
+    Json(payload): Json<AuthPayload>,
+) -> Result<Json<User>, (StatusCode, Json<Value>)> {
     let pool = get_pool().await;
-    let hashed = hash_password(&payload.password)
-        .map_err(|_e| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"error": "Password hashing failed"})),
-            )
-        })?;
+    let hashed = hash_password(&payload.password).map_err(|_e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"error": "Password hashing failed"})),
+        )
+    })?;
 
     match User::create(&pool, &payload.username, &hashed).await {
         Ok(user) => Ok(Json(user)),
@@ -65,23 +64,19 @@ pub async fn register(Json(payload): Json<AuthPayload>) -> Result<Json<User>, (S
     }
 }
 
-
-pub async fn get_meapi(
-    Extension(user): Extension<AuthenticatedUser>
-) -> (StatusCode, Json<Value>) {
+pub async fn get_meapi(Extension(user): Extension<AuthenticatedUser>) -> (StatusCode, Json<Value>) {
     (
         StatusCode::OK,
         Json(json!({
             "id": user.id,
             "username": user.username,
             "avatar_url": user.avatar_url
-        }))
+        })),
     )
 }
 
-
 pub async fn login(
-    Json(payload): Json<AuthPayload>
+    Json(payload): Json<AuthPayload>,
 ) -> Result<Json<Value>, (StatusCode, Json<Value>)> {
     let pool = get_pool().await;
 
@@ -95,7 +90,7 @@ pub async fn login(
                     "status": "error",
                     "message": "Invalid credentials"
                 })),
-            ))
+            ));
         }
     };
 
@@ -108,7 +103,7 @@ pub async fn login(
                     Json(json!({"status": "error", "message": "Token generation failed"})),
                 )
             })?;
-            
+
             Ok(Json(json!({
                 "status": "success",
                 "token": token,
@@ -116,36 +111,33 @@ pub async fn login(
                 "username": user.username
             })))
         }
-        Ok(false) => {
-            Err((
-                StatusCode::UNAUTHORIZED,
-                Json(json!({
-                    "status": "error",
-                    "message": "Invalid credentials"
-                })),
-            ))
-        }
-        Err(_) => {
-            Err((
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({"status": "error", "message": "Password verification failed"})),
-            ))
-        }
+        Ok(false) => Err((
+            StatusCode::UNAUTHORIZED,
+            Json(json!({
+                "status": "error",
+                "message": "Invalid credentials"
+            })),
+        )),
+        Err(_) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({"status": "error", "message": "Password verification failed"})),
+        )),
     }
 }
 
-
 pub async fn list_users() -> impl IntoResponse {
-   let pool = get_pool().await;
+    let pool = get_pool().await;
 
-   match User::find_all(&pool).await {
-        Ok(users) => {
-            (StatusCode::OK, Json(users)).into_response()
-        }
+    match User::find_all(&pool).await {
+        Ok(users) => (StatusCode::OK, Json(users)).into_response(),
 
         Err(e) => {
             eprintln!("Error in fetching users: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database query failed"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database query failed"})),
+            )
+                .into_response()
         }
     }
 }
@@ -164,11 +156,14 @@ pub async fn get_public_messages() -> impl IntoResponse {
         Ok(messages) => (StatusCode::OK, Json(messages)).into_response(),
         Err(e) => {
             eprintln!("DB error in public message: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database query failed"}))).into_response()
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({"error": "Database query failed"})),
+            )
+                .into_response()
         }
     }
 }
-
 
 pub async fn auth_middleware(mut req: Request<Body>, next: Next) -> Result<Response, StatusCode> {
     let pool = get_pool().await;
@@ -176,13 +171,13 @@ pub async fn auth_middleware(mut req: Request<Body>, next: Next) -> Result<Respo
     println!("Headers: {:?}", headers);
 
     let user = AuthenticatedUser::from_auth_header(headers.clone(), pool)
-        .await.map_err(|_| StatusCode::UNAUTHORIZED)?;
+        .await
+        .map_err(|_| StatusCode::UNAUTHORIZED)?;
 
     req.extensions_mut().insert(user);
 
     Ok(next.run(req).await)
 }
-
 
 pub async fn get_dm_messages(
     Path(target_user): Path<String>,
@@ -191,46 +186,47 @@ pub async fn get_dm_messages(
     let pool = get_pool().await;
     let current_user = &auth_user.username;
 
-
     if current_user != &target_user {
         // We'll check if there's a DM between current_user and target_user
         // This logic assumes both sides can see the conversation
         match MessageModel::get_dm_messages(&pool, current_user, &target_user).await {
-            Ok(messages) =>
-            { 
-                        if messages.is_empty() {
-                            println!("No messages found.");
-                        } else {
-                            println!("Messages found: {:?}", messages);
-                        }
-                        println!(" MESSAGES b/w {} {} {:?}", current_user, &target_user,&messages.to_owned());
-                        (StatusCode::OK, Json(messages)).into_response()
-                
+            Ok(messages) => {
+                if messages.is_empty() {
+                    println!("No messages found.");
+                } else {
+                    println!("Messages found: {:?}", messages);
+                }
+                println!(
+                    " MESSAGES b/w {} {} {:?}",
+                    current_user,
+                    &target_user,
+                    &messages.to_owned()
+                );
+                (StatusCode::OK, Json(messages)).into_response()
             }
             Err(e) => {
                 eprintln!("DB error in dm messages: {}", e);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(json!({ "error": "Database query failed" }))
-                ).into_response()
+                    Json(json!({ "error": "Database query failed" })),
+                )
+                    .into_response()
             }
         }
-    } 
-    else {
+    } else {
         (
             StatusCode::BAD_REQUEST,
-            Json(json!({ "error": "Cannot load DMs with yourself" }))
-        ).into_response()
+            Json(json!({ "error": "Cannot load DMs with yourself" })),
+        )
+            .into_response()
     }
 }
-
-
 
 pub async fn handle_uploads(
     State(state): State<Arc<RwLock<ChatState>>>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
-    let state = state.read().await; 
+    let state = state.read().await;
     let mut filename = None;
     let mut file_data = None;
 
@@ -242,10 +238,13 @@ pub async fn handle_uploads(
             "file" => {
                 let original_name = field.file_name().unwrap_or("file").to_string();
                 let pat = PathBuf::from(&original_name);
-                  let ext= pat.extension()
-                    .and_then(|e| e.to_str())
-                    .unwrap_or("");
-                let unique_name = format!("{}_{}.{}", Uuid::new_v4(), chrono::Utc::now().timestamp(), ext);
+                let ext = pat.extension().and_then(|e| e.to_str()).unwrap_or("");
+                let unique_name = format!(
+                    "{}_{}.{}",
+                    Uuid::new_v4(),
+                    chrono::Utc::now().timestamp(),
+                    ext
+                );
 
                 let data = field.bytes().await.unwrap();
                 filename = Some(unique_name);
@@ -278,11 +277,11 @@ pub async fn handle_uploads(
         match tokio::fs::write(&full_path, &data).await {
             Ok(_) => (
                 StatusCode::OK,
-                Json(serde_json::json!({ 
-                    "status": "success", 
+                Json(serde_json::json!({
+                    "status": "success",
                     "filename": name,
                     "upload_url": upload_url
-                }))
+                })),
             ),
             Err(err) => (
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -296,7 +295,6 @@ pub async fn handle_uploads(
         )
     }
 }
-
 
 pub async fn handle_avatar(
     State(state): State<Arc<RwLock<ChatState>>>,
@@ -326,9 +324,7 @@ pub async fn handle_avatar(
             "avatar" => {
                 let original_name = field.file_name().unwrap_or("file").to_string();
                 let path_buf = PathBuf::from(&original_name);
-                let ext = path_buf.extension()
-                    .and_then(|e| e.to_str())
-                    .unwrap_or("");
+                let ext = path_buf.extension().and_then(|e| e.to_str()).unwrap_or("");
 
                 let unique_name = format!(
                     "{}_{}.{}",
@@ -409,7 +405,9 @@ pub async fn handle_avatar(
                 match User::insert_pfp(pool, Some(uid), avatar_url.clone()).await {
                     Ok(_) => (
                         StatusCode::OK,
-                        Json(json!({ "status": "success", "filename": name, "avatarUrl": avatar_url})),
+                        Json(
+                            json!({ "status": "success", "filename": name, "avatar_url": avatar_url}),
+                        ),
                     ),
                     Err(e) => {
                         eprintln!("DB update error: {}", e);
@@ -436,3 +434,5 @@ pub async fn handle_avatar(
         )
     }
 }
+
+pub async fn asshole() {}

@@ -139,3 +139,37 @@ cargo tauri ios dev
 ```
 cargo tauri dev
 ```
+
+## Deploy on AWS (Easiest: Single EC2 + Docker Compose)
+
+### 1) Launch EC2
+- Ubuntu 24.04 instance
+- Open inbound ports: `22` (SSH), `80` (HTTP), `443` (HTTPS)
+
+### 2) Install Docker on EC2
+```bash
+sudo apt-get update
+sudo apt-get install -y docker.io docker-compose-v2
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+### 3) Copy project and start services
+```bash
+git clone <your-repo-url>
+cd brochat
+docker compose up --build -d
+```
+
+### 4) Run database migration once
+Your backend expects the schema from `backend/migrations/20250502140530_init.sql`.
+Copy and execute migration in the postgres container:
+```bash
+docker cp backend/migrations/20250502140530_init.sql $(docker compose ps -q db):/tmp/init.sql
+docker compose exec db psql -U brochat -d brochat -f /tmp/init.sql
+```
+
+### 5) Production env values
+- Set a strong `JWT_SECRET` in `docker-compose.yml`
+- Set `ALLOWED_ORIGINS` to your domain(s)
+- Optional: add TLS with Nginx + Certbot or place ALB/CloudFront in front

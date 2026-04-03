@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: brochat
+      POSTGRES_USER: brochat
+      POSTGRES_PASSWORD: brochat_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brochat -d brochat"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://brochat:brochat_password@db:5432/brochat
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/avatars:/app/avatars
+      - ./backend/uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ./UI/frontend
+      dockerfile: Dockerfile
+    depends_on:
+      - backend
+    expose:
+      - "80"
+
+  caddy:
+    image: serfriz/caddy-duckdns:latest
+    depends_on:
+      - frontend
+    environment:
+      DUCKDNS_TOKEN: ${DUCKDNS_TOKEN:-}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./CaddyFile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  caddy_data:

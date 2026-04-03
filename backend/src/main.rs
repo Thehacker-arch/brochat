@@ -20,6 +20,25 @@ use tokio::sync::RwLock;
 use tower_http::services::ServeDir;
 use ws::ChatState;
 
+fn allowed_origins_from_env() -> Vec<HeaderValue> {
+    let from_env = env::var("ALLOWED_ORIGINS").unwrap_or_default();
+    let mut origins: Vec<HeaderValue> = from_env
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .filter_map(|origin| origin.parse::<HeaderValue>().ok())
+        .collect();
+
+    if origins.is_empty() {
+        origins = vec![
+            "http://localhost:5173".parse::<HeaderValue>().unwrap(),
+            "http://tauri.localhost".parse::<HeaderValue>().unwrap(),
+        ];
+    }
+
+    origins
+}
+
 
 #[tokio::main]
 async fn main() {
@@ -66,12 +85,7 @@ async fn main() {
         .layer(Extension(shared_state))
         .layer(
             CorsLayer::new()
-                .allow_origin([
-                    "http://localhost:5173".parse::<HeaderValue>().unwrap(),
-                    "http://192.168.1.45:5173".parse::<HeaderValue>().unwrap(),
-                    "http://tauri.localhost".parse::<HeaderValue>().unwrap(),
-                    "https://brochat.duckdns.org".parse::<HeaderValue>().unwrap()
-                ])
+                .allow_origin(allowed_origins_from_env())
                 .allow_credentials(true)
                 .allow_methods([Method::GET, Method::POST])
                 .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE]),

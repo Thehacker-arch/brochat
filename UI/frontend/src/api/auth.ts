@@ -1,4 +1,5 @@
 import axios, { AxiosError } from 'axios'
+import { API_BASE_URL } from '../config'
 
 export interface LoginResponse {
   token: string
@@ -15,7 +16,7 @@ export const register = async (credentials: {
 }) => {
   try {
     const response = await axios.post(
-      'http://192.168.1.45:3000/register',
+      `${API_BASE_URL}/register`,
       credentials,
       {
         headers: {
@@ -46,7 +47,7 @@ export const login = async (credentials: {
 }): Promise<LoginResponse> => {
   try {
     const response = await axios.post<LoginResponse>(
-      'http://192.168.1.45:3000/login',
+      `${API_BASE_URL}/login`,
       credentials,
       {
         headers: {

@@ -25,7 +25,7 @@ pub fn create_jwt(user: &crate::models::User) -> Result<String, jsonwebtoken::er
         username: user.username.clone()
     };
 
-    let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "your-secret-key".to_string());
+    let secret = std::env::var("JWT_SECRET").expect("JWT_SECRET must be set");
 
     encode(
         &Header::default(),

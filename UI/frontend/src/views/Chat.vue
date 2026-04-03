@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { logout, isAuthenticated } from '@/api/auth'
 import axios from 'axios'
+import { API_BASE_URL, WS_BASE_URL } from '@/config'
 
 const router = useRouter()
 const ws = ref<WebSocket | null>(null)
@@ -44,7 +45,7 @@ const messagesWithDividers = computed<ChatItem[]>(() => {
     let lastDate: string | null = null
 
     const sortedMessages = [...messages.value].sort((a, b) =>
-        new Date(a.time).getTime() - new Date(b.time).getTime()
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     )
 
     for (const msg of sortedMessages) {
@@ -109,28 +110,47 @@ function shouldGroupWithPrevious(index: number): boolean {
     const currentItem = messagesWithDividers.value[index]
     const prevItem = messagesWithDividers.value[index - 1]
 
-    // Don't group if previous item is a divider
-    if (isDateDivider(prevItem)) return false
+    if (isDateDivider(currentItem) || isDateDivider(prevItem)) return false
 
-    // Don't group if different users
-    // if (currentItem.username !== prevItem.username) return false
+    const currentMsg = currentItem as ChatMessage
+    const prevMsg = prevItem as ChatMessage
 
-    // Don't group if time gap is more than 5 minutes
-    const currentTime = new Date().getTime()
-    const prevTime = new Date(prevItem.timestamp).getTime()
+    if (currentMsg.username !== prevMsg.username) return false
+
+    const currentTime = new Date(currentMsg.timestamp).getTime()
+    const prevTime = new Date(prevMsg.timestamp).getTime()
     return (currentTime - prevTime) < (5 * 60 * 1000)
 }
 
+function itemKey(item: ChatItem, index: number): string {
+    if (isDateDivider(item)) {
+        const d = (item as DateDivider).date
+        return `divider-${d.toISOString()}`
+    }
+    const m = item as ChatMessage
+    return `${m.timestamp}-${m.username}-${index}`
+}
+
+const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="100%" height="100%" fill="%23444"/><text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" fill="%23aaa" font-size="18">👤</text></svg>'
+
+function normalizeUrl(path: string | null | undefined): string {
+    if (!path) return DEFAULT_AVATAR
+    // Backend default currently points to a static path that may not exist on production.
+    // Treat it as "no avatar" and fall back to the inline placeholder.
+    if (path === '/images/default-avatar.png' || path === '/avatars/default-avatar.png') {
+        return DEFAULT_AVATAR
+    }
+    if (path.startsWith('http://') || path.startsWith('https://')) return path
+    const leadingSlash = path.startsWith('/') ? '' : '/'
+    return `${URL}${leadingSlash}${path}`
+}
+
 function getUserAvatar(avatarUrl: string): string {
-    const u = `${URL}${avatarUrl}`
-    console.log(u)
-    return `${URL}${avatarUrl}`
+    return normalizeUrl(avatarUrl)
 }
 
 function getImage(upload_url: string): string {
-    const u = `${URL}${upload_url}`
-    console.log(u)
-    return `${URL}${upload_url}`
+    return normalizeUrl(upload_url)
 }
 
 function formatMessageTime(timestamp: string): string {
@@ -148,8 +168,7 @@ const scrollToBottom = async () => {
 const getConvoKey = (username1: string, username2: string) => {
     return [username1, username2].sort().join('-')
 }
-const URL = 'http://192.168.1.45:3000';
-const URL2 = '192.168.1.45:3000';
+const URL = API_BASE_URL
 
 const fetchAllUsers = async () => {
     try {
@@ -454,7 +473,7 @@ onMounted(async () => {
     messages.value = [...conversations.value.public]
 
     try {
-        ws.value = new WebSocket(`ws://${URL2}/ws/${user.value.username}`)
+        ws.value = new WebSocket(`${WS_BASE_URL}/ws/${user.value.username}`)
 
         ws.value.onmessage = (event) => {
             const msgObj = JSON.parse(event.data)
@@ -483,7 +502,7 @@ onMounted(async () => {
                 if (!conversations.value[convoKey].some(m =>
                     m.username === newMsg.username &&
                     m.message === newMsg.message &&
-                    Math.abs(new Date(m.time).getTime() - now.getTime()) < 1000
+                    Math.abs(new Date(m.timestamp).getTime() - new Date(newMsg.timestamp).getTime()) < 1000
                 )) {
                     conversations.value[convoKey].push(newMsg)
 
@@ -510,7 +529,7 @@ onMounted(async () => {
                     if (!conversations.value.public.some(m =>
                         m.username === newMsg.username &&
                         m.message === newMsg.message &&
-                        Math.abs(new Date(m.time).getTime() - now.getTime()) < 1000 // 1 second window
+                        Math.abs(new Date(m.timestamp).getTime() - new Date(newMsg.timestamp).getTime()) < 1000
                     )) {
                         conversations.value.public.push(newMsg)
 

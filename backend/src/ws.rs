@@ -11,7 +11,7 @@ use std::{
 use tokio::sync::{broadcast, mpsc, RwLock};
 use uuid::Uuid;
 
-use crate::{db::get_pool, models::MessageModel};
+use crate::{db::get_pool, models::{MessageModel, User}};
 
 pub struct ChatState {
     pub tx: broadcast::Sender<String>,
@@ -92,6 +92,10 @@ async fn handle_connection(socket: WebSocket, username: String, state: SharedCha
                             let message = data["message"].as_str().unwrap_or("");
                             let uploadurl = data["upload_url"].as_str().unwrap_or("").to_string();
                             let timestamp = chrono::Utc::now();
+                            let avatar_url = User::find_by_username(pool, &username_clone)
+                                .await
+                                .map(|u| u.avatar_url)
+                                .unwrap_or_else(|_| "/images/default-avatar.png".to_string());
 
                             let state = state_clone.read().await;
 
@@ -119,6 +123,7 @@ async fn handle_connection(socket: WebSocket, username: String, state: SharedCha
                                             "type": "dm",
                                             "from": username_clone,
                                             "message": message,
+                                            "avatar_url": avatar_url,
                                             "upload_url": uploadurl
                                         }).to_string().into()
                                     ));
@@ -130,6 +135,10 @@ async fn handle_connection(socket: WebSocket, username: String, state: SharedCha
                             let uploadurl = data["upload_url"].as_str().unwrap_or("").to_string();
                             let to_username = Some(data["to"].as_str().unwrap_or(""));
                             let timestamp = chrono::Utc::now();
+                            let avatar_url = User::find_by_username(pool, &username_clone)
+                                .await
+                                .map(|u| u.avatar_url)
+                                .unwrap_or_else(|_| "/images/default-avatar.png".to_string());
 
                             let result = MessageModel::save_message(
                                 pool, 
@@ -151,6 +160,7 @@ async fn handle_connection(socket: WebSocket, username: String, state: SharedCha
                                     "type": "chat",
                                     "username": username_clone,
                                     "message": message,
+                                    "avatar_url": avatar_url,
                                     "upload_url": uploadurl
                                 }).to_string()
                             );
